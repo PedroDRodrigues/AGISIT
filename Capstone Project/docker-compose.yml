@@ -1,0 +1,82 @@
+version: '3.7'
+
+services:
+  redis:
+    image: redis/redis-stack:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - ./redis/data:/data
+
+  storage:
+    build: ./storage
+    container_name: storage
+    ports:
+      - "8000:8000"
+    environment:
+      - STORAGE_PORT=8000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+    depends_on:
+      - redis
+
+  calc1:
+    build: ./calc1
+    container_name: calc1
+    ports:
+      - "9002:9002"
+    environment:
+      - STORAGE_URL=http://storage:8000
+    depends_on:
+      - storage
+
+  calc2:
+    build: ./calc2
+    container_name: calc2
+    ports:
+      - "9001:9001"
+    environment:
+      - STORAGE_URL=http://storage:8000
+    depends_on:
+        - storage
+
+  ui:
+    build: ./vuecalc
+    container_name: vuecalc
+    ports:
+      - "2000:2000"
+    environment:
+        - CALC1_URL=http://calc1:9000/api/calc1
+        - CALC2_URL=http://calc2:9001/api/calc2
+        - STORAGE_URL=http://storage:8000/api/storage
+    depends_on:
+        - calc1
+        - calc2
+        - storage
+  prometheus:
+    image: prom/prometheus:v2.44.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./metrics_docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - storage
+      - calc1
+      - calc2
+
+  grafana:
+    image: grafana/grafana:9.5.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    restart: always
+    volumes:
+      - ./metrics_docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - storage
+      - calc1
+      - calc2

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vuecalc-env
+  namespace: default
+data:
+  calc1_url: "http://calc1-svc:9000/api/calc1"
+  calc2_url: "http://calc2-svc:9001/api/calc2"
+  storage_url: "http://storage-svc:5000/api/storage"

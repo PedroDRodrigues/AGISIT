@@ -1,0 +1,81 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: calc2-svc
+  name: calc2-svc
+  namespace: default
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 9001
+  selector:
+    run: calc2-svc
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: calc2-svc
+  name: calc2-svc
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: calc2-svc
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        run: calc2-svc
+    spec:
+      containers:
+        - image: knedlicc/agi36:calc2
+          imagePullPolicy: IfNotPresent
+          name: calc2-svc
+          env:
+            - name: STORAGE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: calc2-config
+                  key: storage_url
+            - name: CALC2_PORT
+              valueFrom:
+                  configMapKeyRef:
+                    name: calc2-config
+                    key: calc2_port
+          ports:
+            - containerPort: 9001
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/calc2/healthz
+              port: 9001
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/calc2/healthz
+              port: 9001
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30

@@ -1,0 +1,57 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: grafana
+  name: grafana
+  namespace: default
+spec:
+  ports:
+    - port: 80
+      name: grafana
+      targetPort: 3000
+  type: LoadBalancer
+  selector:
+    app: grafana
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    run: grafana
+  name: grafana
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: grafana
+  serviceName: grafana
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:9.5.2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: grafana
+          volumeMounts:
+            - name: grafana-volume
+              mountPath: /data
+      volumes:
+        - name: grafana-config
+          hostPath:
+            path: /metrics/grafana/provisioning/datasources
+  volumeClaimTemplates:
+    - metadata:
+        name: grafana-volume
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 100Mi
